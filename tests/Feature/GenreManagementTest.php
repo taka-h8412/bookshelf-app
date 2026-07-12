@@ -26,6 +26,10 @@ class GenreManagementTest extends TestCase
             Route::get('/test/books/create', fn () => '')->name('books.create'); //空文字を返す
         }
 
+        if (! Route::has('books.show')) {
+            Route::get('/test/books/{book}', fn () => '')->name('books.show'); //空文字を返す
+        }
+
         if (! Route::has('ranking.index')) {
             Route::get('/test/ranking', fn () => '')->name('ranking.index'); //空文字を返す
         }
@@ -368,5 +372,82 @@ class GenreManagementTest extends TestCase
             'id' => $genre->id,
             'name' => '小説',
         ]);
+    }
+
+    public function test_未ログインユーザーはジャンル一覧画面にアクセスできない(): void
+    {
+        $response = $this->get(route('genres.index'));
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_未ログインユーザーはジャンル詳細画面にアクセスできない(): void
+    {
+        $genre = Genre::create([
+            'name' => '小説',
+        ]);
+
+        $response = $this->get(
+            route('genres.show', $genre)
+        );
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_未ログインユーザーはジャンル登録画面にアクセスできない(): void
+    {
+        $response = $this->get(route('genres.create'));
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_未ログインユーザーはジャンル編集画面にアクセスできない(): void
+    {
+        $genre = Genre::create([
+            'name' => '小説',
+        ]);
+
+        $response = $this->get(
+            route('genres.edit', $genre)
+        );
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_ジャンル詳細画面では紐づく書籍が10件ずつ表示される(): void
+    {
+        // テスト用のログインユーザーを作成
+        $user = User::factory()->create();
+
+        // 詳細画面に表示するジャンルを作成
+        $genre = Genre::create([
+            'name' => '小説',
+        ]);
+
+        // ジャンルに紐づける書籍を11件作成
+        $books = Book::factory()->count(11)->create([
+            'user_id' => $user->id,
+        ]);
+
+        // 作成した書籍とジャンルを紐づける
+        foreach ($books as $book) {
+            $book->genres()->attach($genre->id);
+        }
+
+        // ログイン状態でジャンル詳細画面へアクセス
+        $response = $this->actingAs($user)->get(
+            route('genres.show', $genre)
+        );
+
+        // 画面が正常に表示されることを確認
+        $response->assertStatus(200);
+
+        // 10件単位でページネーションされていることを確認
+        $response->assertViewHas('books', function ($books) {
+            return $books->perPage() === 10
+                && $books->total() === 11
+                && $books->count() === 10
+                && $books->lastPage() === 2;
+        });
     }
 }
