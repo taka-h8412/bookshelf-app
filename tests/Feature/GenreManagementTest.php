@@ -450,4 +450,48 @@ class GenreManagementTest extends TestCase
                 && $books->lastPage() === 2;
         });
     }
+
+    public function test_ジャンル名が256文字の場合は登録できない(): void
+    {
+        // テスト用のログインユーザーを作成
+        $user = User::factory()->create();
+
+        // ログイン状態で256文字のジャンル名を登録
+        $response = $this->actingAs($user)->post(
+            route('genres.store'),
+            [
+                'name' => str_repeat('あ', 256),
+            ]
+        );
+
+        // nameにバリデーションエラーがあることを確認
+        $response->assertSessionHasErrors([
+            'name' => 'ジャンル名は255文字以内で入力してください。',
+        ]);
+
+        // ジャンル登録されていないことを確認
+        $this->assertDatabaseCount('genres', 0);
+    }
+
+    public function test_ジャンル名が文字列以外の場合は登録できない(): void
+    {
+        // テスト用のログインユーザーを作成
+        $user = User::factory()->create();
+
+        // ログイン状態で配列のジャンル名を登録
+        $response = $this->actingAs($user)->post(
+            route('genres.store'),
+            [
+                'name' => ['小説'],
+            ]
+        );
+
+        // nameにバリデーションエラーがあることを確認
+        $response->assertSessionHasErrors([
+            'name' => 'ジャンル名は文字列で入力してください。',
+        ]);
+
+        // ジャンル登録されていないことを確認
+        $this->assertDatabaseCount('genres', 0);
+    }
 }
