@@ -499,4 +499,380 @@ class BookManagementTest extends TestCase
         $response->assertSee('山田太郎');
         $response->assertSee('技術書');
     }
+
+    public function test_書籍の登録者は編集画面を表示できる(): void
+    {
+        // 書籍を登録するユーザーを作成
+        $user = User::factory()->create();
+
+        // 編集画面に表示するジャンルを作成
+        $selectedGenre = Genre::create([
+            'name' => '技術書',
+        ]);
+
+        $unselectedGenre = Genre::create([
+            'name' => '小説',
+        ]);
+
+        // ログインユーザーが登録した書籍を作成
+        $book = Book::factory()->create([
+            'user_id' => $user->id,
+            'title' => 'Laravel実践ガイド',
+            'author' => '山田太郎',
+            'isbn' => '9784000000101',
+            'published_date' => '2026-07-14',
+            'description' => 'Laravelの実践的な内容を学べる書籍です。',
+        ]);
+
+        // 書籍に技術書ジャンルを紐づける
+        $book->genres()->attach($selectedGenre->id);
+
+        // 登録者本人として書籍編集画面へアクセス
+        $response = $this->actingAs($user)->get(
+            route('books.edit', $book)
+        );
+
+        // 編集画面が正常に表示されることを確認
+        $response->assertStatus(200);
+
+        // 現在の書籍情報が入力欄に表示されることを確認
+        $response->assertSee('書籍の編集');
+        $response->assertSee('value="Laravel実践ガイド"', false);
+        $response->assertSee('value="山田太郎"', false);
+        $response->assertSee('value="9784000000101"', false);
+        $response->assertSee('value="2026-07-14"', false);
+        $response->assertSee('Laravelの実践的な内容を学べる書籍です。');
+
+        // 登録済みジャンルが選択状態で表示されることを確認
+        $response->assertSee(
+            'value="'.$selectedGenre->id.'"',
+            false
+        );
+
+        $response->assertSee('checked', false);
+
+        // 未選択のジャンルも選択肢として表示されることを確認
+        $response->assertSee('小説');
+    }
+
+    public function test_書籍の登録者は書籍情報を更新できる(): void
+    {
+        // 書籍を登録するユーザーを作成
+        $user = User::factory()->create();
+
+        // 更新前後で使用するジャンルを作成
+        $oldGenre = Genre::create([
+            'name' => '技術書',
+        ]);
+
+        $newGenre = Genre::create([
+            'name' => 'ビジネス',
+        ]);
+
+        // ログインユーザーが登録した書籍を作成
+        $book = Book::factory()->create([
+            'user_id' => $user->id,
+            'title' => '更新前タイトル',
+            'author' => '更新前著者',
+            'isbn' => '9784000000201',
+            'published_date' => '2026-07-01',
+            'description' => '更新前の説明です。',
+            'image_url' => null,
+        ]);
+
+        // 更新前のジャンルを紐づける
+        $book->genres()->attach($oldGenre->id);
+
+        // 登録者本人として書籍更新処理を実行
+        $response = $this->actingAs($user)->put(
+            route('books.update', $book),
+            [
+                'title' => '更新後タイトル',
+                'author' => '更新後著者',
+                'isbn' => '9784000000202',
+                'published_date' => '2026-07-14',
+                'description' => '更新後の説明です。',
+                'image_url' => 'https://placehold.co/200x300/e2e8f0/475569?text=update',
+                'genres' => [$newGenre->id],
+            ]
+        );
+
+        // 更新後に書籍詳細画面へリダイレクトされることを確認
+        $response->assertRedirect(
+            route('books.show', $book)
+        );
+
+        // 更新成功のフラッシュメッセージを確認
+        $response->assertSessionHas(
+            'success',
+            '書籍を更新しました。'
+        );
+
+        // booksテーブルの書籍情報が更新されていることを確認
+        $this->assertDatabaseHas('books', [
+            'id' => $book->id,
+            'user_id' => $user->id,
+            'title' => '更新後タイトル',
+            'author' => '更新後著者',
+            'isbn' => '9784000000202',
+            'published_date' => '2026-07-14',
+            'description' => '更新後の説明です。',
+            'image_url' => 'https://placehold.co/200x300/e2e8f0/475569?text=update',
+        ]);
+
+        // 新しいジャンルとの紐づきが保存されていることを確認
+        $this->assertDatabaseHas('book_genre', [
+            'book_id' => $book->id,
+            'genre_id' => $newGenre->id,
+        ]);
+
+        // 更新前のジャンルとの紐づきが削除されていることを確認
+        $this->assertDatabaseMissing('book_genre', [
+            'book_id' => $book->id,
+            'genre_id' => $oldGenre->id,
+        ]);
+    }
+
+    public function test_更新時は現在の書籍のISBNを重複として扱わない(): void
+    {
+        // 書籍を登録するユーザーを作成
+        $user = User::factory()->create();
+
+        // 書籍に紐づけるジャンルを作成
+        $genre = Genre::create([
+            'name' => '技術書',
+        ]);
+
+        // ログインユーザーが登録した書籍を作成
+        $book = Book::factory()->create([
+            'user_id' => $user->id,
+            'title' => '更新前タイトル',
+            'author' => '更新前著者',
+            'isbn' => '9784000000301',
+            'published_date' => '2026-07-01',
+            'description' => '更新前の説明です。',
+            'image_url' => null,
+        ]);
+
+        // 書籍とジャンルを紐づける
+        $book->genres()->attach($genre->id);
+
+        // ISBNは変更せず、その他の書籍情報を更新
+        $response = $this->actingAs($user)->put(
+            route('books.update', $book),
+            [
+                'title' => '更新後タイトル',
+                'author' => '更新後著者',
+                'isbn' => '9784000000301',
+                'published_date' => '2026-07-14',
+                'description' => '更新後の説明です。',
+                'image_url' => 'https://placehold.co/200x300/e2e8f0/475569?text=update',
+                'genres' => [$genre->id],
+            ]
+        );
+
+        // 更新後に書籍詳細画面へリダイレクトされることを確認
+        $response->assertRedirect(
+            route('books.show', $book)
+        );
+
+        // 更新成功のフラッシュメッセージを確認
+        $response->assertSessionHas(
+            'success',
+            '書籍を更新しました。'
+        );
+
+        // 同じISBNのまま書籍情報が更新されていることを確認
+        $this->assertDatabaseHas('books', [
+            'id' => $book->id,
+            'user_id' => $user->id,
+            'title' => '更新後タイトル',
+            'author' => '更新後著者',
+            'isbn' => '9784000000301',
+            'published_date' => '2026-07-14',
+            'description' => '更新後の説明です。',
+            'image_url' => 'https://placehold.co/200x300/e2e8f0/475569?text=update',
+        ]);
+    }
+
+    public function test_書籍の登録者以外は編集画面を表示できない(): void
+    {
+        // 書籍を登録するユーザーを作成
+        $owner = User::factory()->create();
+
+        // 別のログインユーザーを作成
+        $otherUser = User::factory()->create();
+
+        // 登録者が作成した書籍を用意
+        $book = Book::factory()->create([
+            'user_id' => $owner->id,
+        ]);
+
+        // 登録者以外のユーザーとして編集画面へアクセス
+        $response = $this->actingAs($otherUser)->get(
+            route('books.edit', $book)
+        );
+
+        // アクセスが拒否されることを確認
+        $response->assertForbidden();
+    }
+
+    public function test_書籍の登録者以外は書籍情報を更新できない(): void
+    {
+        // 書籍を登録するユーザーを作成
+        $owner = User::factory()->create();
+
+        // 別のログインユーザーを作成
+        $otherUser = User::factory()->create();
+
+        // 書籍に紐づけるジャンルを作成
+        $genre = Genre::create([
+            'name' => '技術書',
+        ]);
+
+        // 登録者が作成した書籍を用意
+        $book = Book::factory()->create([
+            'user_id' => $owner->id,
+            'title' => '更新前タイトル',
+            'isbn' => '9784000000401',
+        ]);
+
+        $book->genres()->attach($genre->id);
+
+        // 登録者以外のユーザーとして更新処理を実行
+        $response = $this->actingAs($otherUser)->put(
+            route('books.update', $book),
+            [
+                'title' => '不正に更新されたタイトル',
+                'author' => $book->author,
+                'isbn' => $book->isbn,
+                'published_date' => $book->published_date,
+                'description' => $book->description,
+                'image_url' => $book->image_url,
+                'genres' => [$genre->id],
+            ]
+        );
+
+        // アクセスが拒否されることを確認
+        $response->assertForbidden();
+
+        // 書籍情報が変更されていないことを確認
+        $this->assertDatabaseHas('books', [
+            'id' => $book->id,
+            'user_id' => $owner->id,
+            'title' => '更新前タイトル',
+            'isbn' => '9784000000401',
+        ]);
+    }
+
+    public function test_未ログインユーザーは書籍編集画面にアクセスできない(): void
+    {
+        // 編集対象の書籍を作成
+        $book = Book::factory()->create();
+
+        // 未ログイン状態で書籍編集画面へアクセス
+        $response = $this->get(
+            route('books.edit', $book)
+        );
+
+        // ログイン画面へリダイレクトされることを確認(authミドルウェア)
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_書籍の登録者は書籍を削除できる(): void
+    {
+        // 書籍を登録するユーザーを作成
+        $user = User::factory()->create();
+
+        // 書籍に紐づけるジャンルを作成
+        $genre = Genre::create([
+            'name' => '技術書',
+        ]);
+
+        // ログインユーザーが登録した書籍を作成
+        $book = Book::factory()->create([
+            'user_id' => $user->id,
+            'title' => '削除対象の書籍',
+        ]);
+
+        // 書籍とジャンルを紐づける
+        $book->genres()->attach($genre->id);
+
+        // 登録者本人として書籍削除処理を実行
+        $response = $this->actingAs($user)->delete(
+            route('books.destroy', $book)
+        );
+
+        // 削除後に書籍一覧画面へリダイレクトされることを確認
+        $response->assertRedirect(
+            route('books.index')
+        );
+
+        // 削除成功のフラッシュメッセージを確認
+        $response->assertSessionHas(
+            'success',
+            '書籍を削除しました。'
+        );
+
+        // booksテーブルから書籍が物理削除されていることを確認
+        $this->assertDatabaseMissing('books', [
+            'id' => $book->id,
+            'title' => '削除対象の書籍',
+        ]);
+
+        // 中間テーブルのジャンル紐づきも削除されていることを確認
+        $this->assertDatabaseMissing('book_genre', [
+            'book_id' => $book->id,
+            'genre_id' => $genre->id,
+        ]);
+    }
+
+        public function test_書籍の登録者以外は書籍を削除できない(): void
+    {
+        // 書籍を登録するユーザーを作成
+        $owner = User::factory()->create();
+
+        // 別のログインユーザーを作成
+        $otherUser = User::factory()->create();
+
+        // 登録者が作成した書籍を用意
+        $book = Book::factory()->create([
+            'user_id' => $owner->id,
+            'title' => '削除してはいけない書籍',
+        ]);
+
+        // 登録者以外のユーザーとして削除処理を実行
+        $response = $this->actingAs($otherUser)->delete(
+            route('books.destroy', $book)
+        );
+
+        // アクセスが拒否されることを確認
+        $response->assertForbidden();
+
+        // 書籍が削除されずDBに残っていることを確認
+        $this->assertDatabaseHas('books', [
+            'id' => $book->id,
+            'user_id' => $owner->id,
+            'title' => '削除してはいけない書籍',
+        ]);
+    }
+
+    public function test_未ログインユーザーは書籍を削除できない(): void
+    {
+        // 削除対象の書籍を作成
+        $book = Book::factory()->create();
+
+        // 未ログイン状態で削除処理を実行
+        $response = $this->delete(
+            route('books.destroy', $book)
+        );
+
+        // ログイン画面へリダイレクトされることを確認
+        $response->assertRedirect(route('login'));
+
+        // 書籍が削除されずDBに残っていることを確認
+        $this->assertDatabaseHas('books', [
+            'id' => $book->id,
+        ]);
+    }
 }

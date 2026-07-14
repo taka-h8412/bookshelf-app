@@ -97,6 +97,12 @@ class GenreManagementTest extends TestCase
         // 登録後にジャンル一覧画面へリダイレクトされることを確認
         $response->assertRedirect(route('genres.index'));
 
+        // 登録成功のフラッシュメッセージが設定されることを確認
+        $response->assertSessionHas(
+            'success',
+            'ジャンルを登録しました。'
+        );
+
         // 入力したジャンルがDBに保存されていることを確認
         $this->assertDatabaseHas('genres', [
             'name' => '技術書',
@@ -211,6 +217,12 @@ class GenreManagementTest extends TestCase
         // 更新後にジャンル一覧画面へリダイレクトされることを確認
         $response->assertRedirect(route('genres.index'));
 
+        // 更新成功のフラッシュメッセージが設定されることを確認
+        $response->assertSessionHas(
+            'success',
+            'ジャンルを更新しました。'
+        );
+
         // 対象ジャンルの名前が更新されていることを確認
         $this->assertDatabaseHas('genres', [
             'id' => $genre->id,
@@ -306,6 +318,12 @@ class GenreManagementTest extends TestCase
         // 更新後にジャンル一覧画面へリダイレクトされることを確認
         $response->assertRedirect(route('genres.index'));
 
+        // 更新成功のフラッシュメッセージが設定されることを確認
+        $response->assertSessionHas(
+            'success',
+            'ジャンルを更新しました。'
+        );
+
         // ジャンル名が保持されていることを確認
         $this->assertDatabaseHas('genres', [
             'id' => $genre->id,
@@ -330,6 +348,12 @@ class GenreManagementTest extends TestCase
 
         // 削除後にジャンル一覧画面へリダイレクトされることを確認
         $response->assertRedirect(route('genres.index'));
+
+        // 削除成功のフラッシュメッセージが設定されることを確認
+        $response->assertSessionHas(
+            'success',
+            'ジャンルを削除しました。'
+        );
 
         // 対象ジャンルがDBから削除されていることを確認
         $this->assertDatabaseMissing('genres', [
@@ -364,8 +388,11 @@ class GenreManagementTest extends TestCase
         // 削除できず、ジャンル一覧画面へ戻ることを確認
         $response->assertRedirect(route('genres.index'));
 
-        // エラーフラッシュメッセージが設定されていることを確認
-        $response->assertSessionHas('error','書籍が紐づいているジャンルは削除できません。');
+        // 削除できないことを示すエラーメッセージが設定されることを確認
+        $response->assertSessionHas(
+            'error',
+            '書籍が紐づいているジャンルは削除できません。'
+        );
 
         // 対象ジャンルがDBに残っていることを確認
         $this->assertDatabaseHas('genres', [
