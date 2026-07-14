@@ -27,7 +27,7 @@
                         <div class="md:w-2/3">
                             <div class="flex items-start justify-between mb-4">
                                 <h1 class="text-2xl font-bold">{{ $book->title }}</h1>
-
+                            @if (Route::has('favorites.toggle'))
                                 <!-- お気に入りボタン -->
                                 @auth
                                     @if(Auth::user()->favoriteBooks->contains($book->id))
@@ -56,6 +56,7 @@
                                         </svg>
                                     </a>
                                 @endauth
+                            @endif
                             </div>
 
                             <p class="text-gray-600 mb-2"><strong>著者:</strong> {{ $book->author }}</p>
@@ -98,6 +99,7 @@
                         <h2 class="text-xl font-bold mb-4">レビュー</h2>
 
                         @auth
+                            @if (Route::has('reviews.store'))
                             <!-- レビュー投稿フォーム -->
                             <div class="mb-6 bg-gray-50 p-4 rounded-lg">
                                 <h3 class="font-semibold mb-3">レビューを投稿</h3>
@@ -133,6 +135,7 @@
                                     </div>
                                 </form>
                             </div>
+                            @endif
                         @else
                             <p class="mb-6 text-gray-600">
                                 レビューを投稿するには<a href="{{ route('login') }}" class="text-blue-600 hover:underline">ログイン</a>してください。
