@@ -3,6 +3,7 @@
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\GenreController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\FavoriteController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -77,15 +78,24 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | お気に入り管理
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/favorites', [FavoriteController::class, 'index'])
+        ->name('favorites.index');
+
+    Route::post('/books/{book}/favorite', [FavoriteController::class, 'toggle'])
+        ->name('favorites.toggle');
+
+    /*
+    |--------------------------------------------------------------------------
     | 未実装機能の仮ルート
     |--------------------------------------------------------------------------
     */
 
     Route::get('/ranking', fn () => 'ランキングは実装中です。')
         ->name('ranking.index');
-
-    Route::get('/favorites', fn () => 'お気に入り一覧は実装中です。')
-        ->name('favorites.index');
 });
 
 /*
