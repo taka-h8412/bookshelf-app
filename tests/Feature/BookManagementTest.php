@@ -6,29 +6,11 @@ use App\Models\Book;
 use App\Models\Genre;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class BookManagementTest extends TestCase
 {
     use RefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        // 共通ナビゲーション(navigation.blade.php)で使用する未実装ルートを、テスト中だけ仮登録する
-        if (! Route::has('ranking.index')) {
-            Route::get('/test/ranking', fn () => '')->name('ranking.index');
-        }
-
-        if (! Route::has('favorites.index')) {
-            Route::get('/test/favorites', fn () => '')->name('favorites.index');
-        }
-
-        // テスト中に追加した名前付きルートをLaravelへ再認識させる
-        app('router')->getRoutes()->refreshNameLookups();
-    }
 
     public function test_ゲストユーザーは書籍一覧画面を表示できる(): void
     {

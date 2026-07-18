@@ -11,20 +11,6 @@ class ReviewController extends Controller
 {
     public function store(StoreReviewRequest $request, Book $book)
     {
-        // 同じユーザーが同じ書籍へレビューを投稿済みか確認
-        $reviewExists = $book->reviews()
-            ->where('user_id', auth()->id())
-            ->exists();
-
-        // 投稿済みの場合は入力画面へ戻してエラーを表示
-        if ($reviewExists) {
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'rating' => 'この書籍にはすでにレビューを投稿しています。',
-                ]);
-        }
-
         // reviewsテーブルへ保存する入力項目だけを取得
         $reviewData = $request->only([
             'rating',

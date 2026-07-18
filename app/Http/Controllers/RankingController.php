@@ -8,7 +8,7 @@ class RankingController extends Controller
 {
     public function index()
     {
-        // レビュー平均評価が高い順に上位10冊を取得
+        // レビュー平均評価とレビュー件数を集計し、評価が高い順に上位10冊を取得
         $rankedBooks = Book::withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->having('reviews_count', '>', 0)
