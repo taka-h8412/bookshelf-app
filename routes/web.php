@@ -1,9 +1,10 @@
 <?php
 
 use App\Http\Controllers\BookController;
-use App\Http\Controllers\GenreController;
-use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\GenreController;
+use App\Http\Controllers\RankingController;
+use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -12,11 +13,14 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// トップページ・書籍一覧
+// トップページ・書籍一覧・ランキング
 Route::get('/', [BookController::class, 'index']);
 
 Route::get('/books', [BookController::class, 'index'])
     ->name('books.index');
+
+Route::get('/ranking', [RankingController::class, 'index'])
+    ->name('ranking.index');
 
 /*
 |--------------------------------------------------------------------------
@@ -87,15 +91,6 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/books/{book}/favorite', [FavoriteController::class, 'toggle'])
         ->name('favorites.toggle');
-
-    /*
-    |--------------------------------------------------------------------------
-    | 未実装機能の仮ルート
-    |--------------------------------------------------------------------------
-    */
-
-    Route::get('/ranking', fn () => 'ランキングは実装中です。')
-        ->name('ranking.index');
 });
 
 /*
