@@ -6,19 +6,11 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreBookRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
@@ -42,6 +34,7 @@ class StoreBookRequest extends FormRequest
             'isbn.digits' => 'ISBNは13桁の数字で入力してください。',
             'isbn.unique' => 'このISBNは既に登録されています。',
             'published_date.required' => '出版日を入力してください。',
+            'image_url.url' => '画像URLはURL形式で入力してください。',
             'genres.required' => 'ジャンルを選択してください。',
             'genres.min' => 'ジャンルを選択してください。',
             'genres.*.exists' => '選択されたジャンルは存在しません。',

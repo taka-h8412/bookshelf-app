@@ -9,9 +9,6 @@ use App\Models\Genre;
 
 class BookController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $books = Book::with('genres')->withAvg('reviews', 'rating')->paginate(10);
@@ -19,9 +16,6 @@ class BookController extends Controller
         return view('books.index', compact('books'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         $genres = Genre::all();
@@ -29,9 +23,6 @@ class BookController extends Controller
         return view('books.create', compact('genres'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(StoreBookRequest $request)
     {
         // 書籍テーブルへ保存する項目だけをリクエストから取得
@@ -63,14 +54,12 @@ class BookController extends Controller
         return redirect()->route('books.show', $book)->with('success', '書籍を登録しました。');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Book $book)
     {
         // 詳細画面で使用する関連データをまとめて取得
         $book->load([
             'genres',
+            'reviews' => fn ($query) => $query->latest(),
             'reviews.user',
             'reviews.likedByUsers',
         ]);
@@ -79,9 +68,6 @@ class BookController extends Controller
         return view('books.show', compact('book'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Book $book)
     {
         // 書籍の登録者本人だけ編集を許可
@@ -97,9 +83,6 @@ class BookController extends Controller
         return view('books.edit', compact('book', 'genres'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(UpdateBookRequest $request, Book $book)
     {
         // 書籍の登録者本人だけ更新を許可
@@ -132,9 +115,6 @@ class BookController extends Controller
         return redirect()->route('books.show', $book)->with('success', '書籍を更新しました。');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Book $book)
     {
         // 書籍の登録者本人だけ削除を許可

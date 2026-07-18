@@ -875,4 +875,72 @@ class BookManagementTest extends TestCase
             'id' => $book->id,
         ]);
     }
+
+    public function test_出版日が有効な日付でない場合は書籍を登録できない(): void
+    {
+        // 書籍を登録するログインユーザーを作成
+        $user = User::factory()->create();
+
+        // 書籍に紐づけるジャンルを作成
+        $genre = Genre::create([
+            'name' => '技術書',
+        ]);
+
+        // 有効ではない出版日で書籍登録処理を実行
+        $response = $this->actingAs($user)->post(
+            route('books.store'),
+            [
+                'title' => '日付確認用書籍',
+                'author' => 'テスト著者',
+                'isbn' => '9781234567890',
+                'published_date' => '2026-13-40',
+                'description' => '出版日のバリデーション確認用です。',
+                'image_url' => 'https://placehold.co/200x300',
+                'genres' => [$genre->id],
+            ]
+        );
+
+        // 出版日にバリデーションエラーがあることを確認
+        $response->assertSessionHasErrors('published_date');
+
+        // 書籍がDBに登録されていないことを確認
+        $this->assertDatabaseMissing('books', [
+            'isbn' => '9781234567890',
+        ]);
+    }
+
+    public function test_画像URLがURL形式でない場合は書籍を登録できない(): void
+    {
+        // 書籍を登録するログインユーザーを作成
+        $user = User::factory()->create();
+
+        // 書籍に紐づけるジャンルを作成
+        $genre = Genre::create([
+            'name' => '技術書',
+        ]);
+
+        // URL形式ではない画像URLで書籍登録処理を実行
+        $response = $this->actingAs($user)->post(
+            route('books.store'),
+            [
+                'title' => '画像URL確認用書籍',
+                'author' => 'テスト著者',
+                'isbn' => '9780987654321',
+                'published_date' => '2026-07-17',
+                'description' => '画像URLのバリデーション確認用です。',
+                'image_url' => '画像URLではない文字列',
+                'genres' => [$genre->id],
+            ]
+        );
+
+        // 画像URLに指定したバリデーションメッセージがあることを確認
+        $response->assertSessionHasErrors([
+            'image_url' => '画像URLはURL形式で入力してください。',
+        ]);
+
+        // 書籍がDBに登録されていないことを確認
+        $this->assertDatabaseMissing('books', [
+            'isbn' => '9780987654321',
+        ]);
+    }
 }
